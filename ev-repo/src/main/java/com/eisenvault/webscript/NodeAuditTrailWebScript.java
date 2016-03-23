@@ -11,6 +11,7 @@ import java.util.Map;
 
 import org.alfresco.error.AlfrescoRuntimeException;
 import org.alfresco.model.ContentModel;
+import org.alfresco.query.PagingResults;
 import org.alfresco.repo.model.Repository;
 import org.alfresco.repo.security.authentication.AuthenticationUtil;
 import org.alfresco.repo.security.authentication.AuthenticationUtil.RunAsWork;
@@ -24,6 +25,8 @@ import org.alfresco.service.cmr.repository.datatype.TypeConversionException;
 import org.alfresco.service.namespace.NamespaceService;
 import org.alfresco.service.namespace.QName;
 import org.alfresco.util.ISO9075;
+import org.alfresco.util.ModelUtil;
+import org.alfresco.util.ScriptPagingDetails;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,7 +57,7 @@ public class NodeAuditTrailWebScript extends DeclarativeWebScript {
 	public void setNamespaceService(NamespaceService namespaceService) {
 		this.namespaceService = namespaceService;
 	}
-
+	
 	@Override
 	protected Map<String, Object> executeImpl(WebScriptRequest req, Status status, Cache cache) {
 		Map<String, Object> model = new HashMap<String, Object>();
@@ -69,7 +72,7 @@ public class NodeAuditTrailWebScript extends DeclarativeWebScript {
 			
 			List<TemplateAuditInfo> auditTrailList = getAuditTrail(nodeRef);
 			List<Map<String,Object>> auditList = new ArrayList<Map<String,Object>>(auditTrailList.size());
-			
+			ScriptPagingDetails pagingDetails = new ScriptPagingDetails(100, 0);
 			for(TemplateAuditInfo auditInfo : auditTrailList){
 				if(logger.isDebugEnabled()){
 					logger.debug(auditInfo.toString());
@@ -101,10 +104,11 @@ public class NodeAuditTrailWebScript extends DeclarativeWebScript {
 			Map<QName, Serializable> props = nodeService.getProperties(nodeRef);
 			String fileName = (String) props.get(ContentModel.PROP_NAME);
 			
-			model.put("data", auditList);
+			model.put("data", ModelUtil.page(auditList, pagingDetails));
 			model.put("nodeRef", nodeRef.getId());
 			model.put("fileName",fileName);
 			model.put("count", auditList.size());
+			model.put("paging", ModelUtil.buildPaging(pagingDetails));
 			model.put("returnStatus", Boolean.TRUE);
 			model.put("statusMessage", "Successfully retrieved audit trail for nodeRef["+nodeRef.getId()+"]");
 			
